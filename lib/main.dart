@@ -49,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     if (Platform.isWindows) {
-      defaultDir = new Directory('C:\\Users\\Public\\Music\\Sample Music');
+      defaultDir = new Directory('\\Users\\AnyUser\\Music\\test');
     } else if (Platform.isAndroid) {
       defaultDir = new Directory('storage/emulated/0/Music');
     }
@@ -146,7 +146,6 @@ class _MyHomePageState extends State<MyHomePage> {
     } else if (Platform.isAndroid) {
       return null;
     }
-    return null;
   }
 
   void _proceedArg(String path) {
@@ -175,15 +174,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-void printFileInfo(String fileName) {
+Future<void> printFileInfo(String fileName) async {
   final file = File(fileName);
   List<Tag> newTags = new List<Tag>();
   Tag tags = new Tag();
   // Map<String, dynamic> test = new Map<String, dynamic>();
   // test.addAll({'artist' : "Bond"});
-  tags.tags = {'artist' : "Bond"};
+  tags.type = 'id3';
+  tags.version = '2.3.0';
+  tags.tags = {'title' : "Bond"};
   newTags.add(tags);
-  TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
+  await TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
     print('FILE: $fileName');
     l.forEach(print);
     print('\n');
@@ -192,11 +193,12 @@ void printFileInfo(String fileName) {
 
 
   print('\n');
+  print(newTags[0]);
   print('\n');
 
-  TagProcessor().putTagsToByteArray(file.readAsBytes(), newTags).then((value) => file.writeAsBytes(value));
+  await TagProcessor().putTagsToByteArray(file.readAsBytes(), newTags).then((value) => file.writeAsBytes(value));
 
-  TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
+  await TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
     print('FILE: $fileName');
     l.forEach(print);
     print('\n');
