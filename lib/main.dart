@@ -49,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     if (Platform.isWindows) {
-      defaultDir = new Directory('\\Users\\Public\\Music');
+      defaultDir = new Directory('C:\\Users\\Public\\Music\\Sample Music');
     } else if (Platform.isAndroid) {
       defaultDir = new Directory('storage/emulated/0/Music');
     }
@@ -146,6 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
     } else if (Platform.isAndroid) {
       return null;
     }
+    return null;
   }
 
   void _proceedArg(String path) {
@@ -189,10 +190,11 @@ void printFileInfo(String fileName) {
   });
 
 
+
   print('\n');
   print('\n');
 
-  TagProcessor().putTagsToByteArray(file.readAsBytes(), newTags);
+  TagProcessor().putTagsToByteArray(file.readAsBytes(), newTags).then((value) => file.writeAsBytes(value));
 
   TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
     print('FILE: $fileName');
