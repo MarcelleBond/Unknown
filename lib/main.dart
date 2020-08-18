@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dart_tags/dart_tags.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
@@ -44,18 +45,25 @@ class _MyHomePageState extends State<MyHomePage> {
   List<String> _songs = List<String>();
   int songCount = 0;
   Directory defaultDir;
-  
 
   void initState() {
     super.initState();
-    if (Platform.isWindows) {
-      defaultDir = new Directory('\\Users\\AnyUser\\Music\\test');
-    } else if (Platform.isAndroid) {
-      defaultDir = new Directory('storage/emulated/0/Music');
-    }
+    startup();
+  }
 
-    _addSongs(defaultDir);
-   
+  void startup() async {
+    if (Platform.isWindows) {
+      defaultDir = new Directory('C:\\Users\\AnyUser\\Music\\test');
+      _addSongs(defaultDir);
+    } else if (Platform.isAndroid) {
+      await Permission.storage.request();
+      if (await Permission.storage.isGranted) {
+        defaultDir = new Directory('storage/emulated/0/Music');
+        _addSongs(defaultDir);
+      } else {
+        await openAppSettings();
+      }
+    }
   }
 
   @override
@@ -72,11 +80,20 @@ class _MyHomePageState extends State<MyHomePage> {
                     width: 100, height: 50, fit: BoxFit.scaleDown))),
         actions: <Widget>[
           PopupMenuButton(
+            onSelected: (value) {
+              _proceedArg(_songs[1]);
+            },
             itemBuilder: (context) {
               return [
-                PopupMenuItem(child: Text("Settings")),
-                PopupMenuItem(child: Text("Organise Music"))
-                ];
+                PopupMenuItem(
+                  child: Text("Settings"),
+                  value: 0,
+                ),
+                PopupMenuItem(
+                  child: Text("Organise Music"),
+                  value: 1,
+                )
+              ];
             },
             icon: Icon(Icons.menu),
           )
@@ -85,14 +102,15 @@ class _MyHomePageState extends State<MyHomePage> {
       body: GridView.count(
         crossAxisCount: 1,
         scrollDirection: Axis.vertical,
-        children: List.generate(songCount, (index){
+        children: List.generate(songCount, (index) {
           return Center(
             child: Container(
-               decoration: BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey, width: 3.0),
-               ),
-               padding: const EdgeInsets.all(16.0),
-               child:  Text(_songs[index]), /*  Text(
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(_songs[
+                  index]), /*  Text(
                  'Video $index',
                  style: Theme.of(context).textTheme.headline,
                ), */
@@ -102,7 +120,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
-
 
   void _addSongs(Directory list) async {
     List<String> songs = List<String>();
@@ -120,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _songs = songs;
       songCount = songs.length;
     });
-    _proceedArg(songs[0]);
+    // _proceedArg(songs[0]);
   }
 
   void _showFilesinDir(Directory dir) {
@@ -146,62 +163,87 @@ class _MyHomePageState extends State<MyHomePage> {
     } else if (Platform.isAndroid) {
       return null;
     }
+    return null;
   }
+
+/* var listTags = new List<Tag>();
+    var tag = new Tag(); 
+    tag.type = "ID3";
+    tag.version = "2.3.0"; 
+    tag.tags = {"PRIV" : "䴯啮楱略䙩汥䥤敮瑩晩敲AMGa_id=R   580126;AMGp_id=P     4099;AMGt_id=T  5518741�", "TPUB" : "Sony Music Distribution", "track": "7", "album": "A New Day Has Come [Australian Bonus Track]", "year": "2002", "TPE2": "Celine Dion", "title": "Goodbye's (The Saddest Word)", "genre": "3", "TCOM": "Robert John 'Mutt' Lange", "artist": "Mac Miller"};
+    listTags.add(tag); */
 
   void _proceedArg(String path) {
-  final fileType = FileStat.statSync(path).type;
-  switch (fileType) {
-    case FileSystemEntityType.directory:
-      Directory(path)
-          .list(recursive: true, followLinks: false)
-          .listen((FileSystemEntity entity) {
-        if (entity.statSync().type == FileSystemEntityType.file &&
-            entity.path.endsWith('.mp3')) {
-          printFileInfo(entity.path);
+    final fileType = FileStat.statSync(path).type;
+    switch (fileType) {
+      case FileSystemEntityType.directory:
+        Directory(path)
+            .list(recursive: true, followLinks: false)
+            .listen((FileSystemEntity entity) {
+          if (entity.statSync().type == FileSystemEntityType.file &&
+              entity.path.endsWith('.mp3')) {
+            printFileInfo(entity.path);
+          }
+        });
+        break;
+      case FileSystemEntityType.file:
+        if (path.endsWith('.mp3')) {
+          printFileInfo(path);
         }
-      });
-      break;
-    case FileSystemEntityType.file:
-      if (path.endsWith('.mp3')) {
-        printFileInfo(path);
-      }
-      break;
-    case FileSystemEntityType.notFound:
-      print('file not found');
-      break;
-    default:
-      print('sorry dude I don`t know what I must to do with that...\n');
+        break;
+      case FileSystemEntityType.notFound:
+        print('file not found');
+        break;
+      default:
+        print('sorry dude I don`t know what I must to do with that...\n');
+    }
   }
-}
 
-Future<void> printFileInfo(String fileName) async {
-  final file = File(fileName);
-  List<Tag> newTags = new List<Tag>();
-  Tag tags = new Tag();
-  // Map<String, dynamic> test = new Map<String, dynamic>();
-  // test.addAll({'artist' : "Bond"});
-  tags.type = 'id3';
-  tags.version = '2.3.0';
-  tags.tags = {'title' : "Bond"};
-  newTags.add(tags);
-  await TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
-    print('FILE: $fileName');
-    l.forEach(print);
-    print('\n');
-  });
-
-
-
-  print('\n');
-  print(newTags[0]);
-  print('\n');
-
-  await TagProcessor().putTagsToByteArray(file.readAsBytes(), newTags).then((value) => file.writeAsBytes(value));
-
-  await TagProcessor().getTagsFromByteArray(file.readAsBytes()).then((l) {
-    print('FILE: $fileName');
-    l.forEach(print);
-    print('\n');
-  });
-}
+  Future<void> printFileInfo(String fileName) async {
+    print("made it to file info printing\n\n\n");
+    final file = File(fileName);
+    var check = await file.open();
+    print("made it pass the file opening\n\n\n");
+    // print(await check.read(check.lengthSync()));
+    TagProcessor()
+        .getTagsFromByteArray(check.read(check.lengthSync()))
+        .then((l) {
+      print('FILE: $fileName');
+      var listTags = new List<Tag>();
+      var tag = new Tag();
+      tag.type = "ID3";
+      tag.version = "2.3.0";
+      tag.tags = {
+        "PRIV":
+            "䴯啮楱略䙩汥䥤敮瑩晩敲AMGa_id=R   580126;AMGp_id=P     4099;AMGt_id=T  5518741�",
+        "TPUB": "Sony Music Distribution",
+        "track": "7",
+        "album": "A New Day Has Come [Australian Bonus Track]",
+        "year": "2002",
+        "TPE2": "Celine Dion",
+        "title": "Goodbye's (The Saddest Word)",
+        "genre": "3",
+        "TCOM": "Robert John 'Mutt' Lange",
+        "artist": "Mac Miller"
+      };
+      listTags.add(tag);
+      check.setPositionSync(0);
+      TagProcessor()
+          .putTagsToByteArray(check.read(check.lengthSync()))
+          .then((value) {
+        check.writeFromSync(value);
+        check.setPositionSync(0);
+        TagProcessor()
+            .getTagsFromByteArray(check.read(check.lengthSync()))
+            .then((l) {
+          print('FILE: $fileName');
+          final output = File("C:\\Users\\AnyUser\\Music\\test.txt");
+          output.writeAsStringSync(l.toString());
+          print('\n');
+          check.closeSync();
+        });
+      });
+      // l.forEach(print);
+    });
+  }
 }
